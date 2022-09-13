@@ -19,12 +19,24 @@ const giphyConfig = {
 };
 
 const gifCache = [];
+const favoriteGifs = [];
 
 // MIDDLEWARE
 app.use(cors());
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 app.get("/", (req, res) => {
-    res.send("HELLO")
+    res.send("Nothing here")
+})
+
+app.post("/login", (req, res) => {
+    console.log("login request received")
+    console.log("body", req.body)
+    res.send({
+        token: "test123"
+        // change to JWT eventually
+    })
 })
 
 app.get("/gifs/search", async (req, res) => {
@@ -50,8 +62,30 @@ app.get("/gifs/search", async (req, res) => {
         }
         gifCache.push(newGif)
     }
-    console.log("data sent")
     res.send(gifCache);
+})
+
+app.get("/gifs/favorites", (req, res) => {
+    res.send(favoriteGifs)
+})
+
+app.post("/gifs/favorites", (req, res) => {
+    const { favoriteGif } = req.body;
+    for (gif of gifCache) {
+        if (gif.id === favoriteGif.id) {
+            gif.isFavorite = !gif.isFavorite;
+            if (gif.isFavorite) {
+                favoriteGifs.push(gif)
+            } else {
+                favoriteGifs.splice(favoriteGifs.findIndex(el => el.id === gif.id), 1)
+            }
+        }
+    }
+    res.send(favoriteGifs)
+})
+
+app.get("/gifs", (req, res) => {
+    res.send(gifCache)
 })
 
 
