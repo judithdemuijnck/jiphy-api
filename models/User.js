@@ -9,6 +9,14 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
+const favoritesSchema = new mongoose.Schema({
+    _id: String,
+    isFavorite: Boolean,
+    searchTerm: String,
+    title: String,
+    url: String
+})
+
 const userSchema = new mongoose.Schema({
     username: {
         type: String,
@@ -29,7 +37,8 @@ const userSchema = new mongoose.Schema({
     profilePic: new mongoose.Schema({
         url: String,
         filename: String
-    })
+    }),
+    favoriteGifs: [favoritesSchema]
 })
 
 module.exports = mongoose.model("User", userSchema)
