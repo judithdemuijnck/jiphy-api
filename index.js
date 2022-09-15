@@ -18,8 +18,26 @@ const giphyConfig = {
     }
 };
 
+const mongoose = require("mongoose");
+const User = require("./models/User");
+
+const bcrypt = require("bcrypt");
+const saltRounds = 12;
+const jwt = require('jsonwebtoken');
+const jwtSecret = process.env.JWT_SECRET_KEY;
+
+
 const gifCache = [];
 const favoriteGifs = [];
+
+// Setting up connection to Database
+mongoose.connect("mongodb://localhost:27017/jiphy")
+    .then(() => console.log("DATABASE CONNECTED"))
+    .catch(err => {
+        console.log("DB CONNECTION ERROR")
+        console.log(err)
+    })
+
 
 // MIDDLEWARE
 app.use(cors());
@@ -31,11 +49,20 @@ app.get("/", (req, res) => {
 })
 
 app.post("/login", (req, res) => {
-    console.log("login request received")
-    console.log("body", req.body)
+
+    console.log("login request received");
+    token = jwt.sign({ username: "test123" }, jwtSecret)
+    res.send(token)
+})
+
+app.post("/register", async (req, res) => {
+    const { username, email, password } = req.body
+    console.log("register request received")
+    const hashedPw = await bcrypt.hash(password, saltRounds)
+    const newUser = new User({ username, email, password: hashedPw })
+    await newUser.save();
     res.send({
-        token: "test123"
-        // change to JWT eventually
+        username: username
     })
 })
 
@@ -90,4 +117,9 @@ app.get("/gifs", (req, res) => {
 
 
 
+
 app.listen(PORT, console.log("SERVER RUNNING ON PORT 8080"))
+
+const returnedToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbiI6InRlc3QxMjMiLCJpYXQiOjE2NjMxNzEzNjd9.rP8bg8padtzXSEY9RW9tVprgAuT_KqWTfNlqgzpzamA"
+const decoded = jwt.verify(returnedToken, jwtSecret)
+console.log(decoded)
