@@ -55,7 +55,7 @@ app.post("/login", async (req, res) => {
     const isValid = await bcrypt.compare(password, matchedUser.password)
     console.log("login request received");
     if (isValid) {
-        currentToken = jwt.sign({ username: username }, jwtSecret, { expiresIn: 120 })
+        currentToken = jwt.sign({ username: username }, jwtSecret, { expiresIn: 604800 })
         res.send({
             token: currentToken,
             //spreads contents into user without password
@@ -73,43 +73,25 @@ app.post("/register", async (req, res) => {
     const hashedPw = await bcrypt.hash(password, saltRounds)
     const newUser = new User({ username, email, password: hashedPw })
     await newUser.save();
-    currentToken = jwt.sign({ username: username }, jwtSecret)
+    currentToken = jwt.sign({ username: username }, jwtSecret, { expiresIn: 604800 })
     res.send({
         token: currentToken,
         user: { ...newUser._doc, password: undefined }
     })
 })
 
-app.get("/verify", async (req, res) => {
+app.get("/user", async (req, res) => {
     const recoveredToken = req.headers.token
     try {
         const decoded = jwt.verify(recoveredToken, jwtSecret)
         const matchedUser = await User.findOne({ username: decoded.username })
-        res.send(matchedUser ? "valid" : "invalid")
+        res.send({ user: { ...matchedUser._doc, password: undefined } })
+    } catch (err) {
+        console.log("ERROR")
+        res.status(401).send({ error: "Token invalid/missing. Please login again" })
+        // do sth in client --> log user out / clear token / throw 401 error
     }
-    catch (err) {
-        console.log("invalid token")
-        res.send("invalid")
-    }
-})
 
-app.get("/user", async (req, res) => {
-    const recoveredToken = req.headers.token
-    // return "null" as string --> is there anyway I can convert to null? JSON.parse?
-    if (recoveredToken !== "null") {
-        try {
-            const decoded = jwt.verify(recoveredToken, jwtSecret)
-            const matchedUser = await User.findOne({ username: decoded.username })
-            res.send({ ...matchedUser._doc, password: undefined })
-        } catch (err) {
-            console.log("ERROR")
-            console.log(err)
-            res.send("Token invalid, log in again")
-            // do sth in client --> log user out / clear token / throw 401 error
-        }
-    } else {
-        res.send({})
-    }
 })
 
 app.get("/gifs/search", async (req, res) => {
@@ -204,14 +186,7 @@ app.get("/gifs", (req, res) => {
 
 app.listen(PORT, console.log("SERVER RUNNING ON PORT 8080"))
 
-// const testToken = jwt.sign({ data: "foobar" }, jwtSecret, { expiresIn: 120 });
 
-
-
-
-// set JWT expires in i.e. a week
-// when expires, verify throws an error
-// probably put in try - catch expression
 
 
 // connect user to individual user: user/:id
@@ -226,10 +201,6 @@ app.listen(PORT, console.log("SERVER RUNNING ON PORT 8080"))
 // create edit page
 
 
-// CATCH mistake - what happens if you get logged out for exired token
-
-
 // VERIFY TOKEN IN MIDDLEWARE
 // FIND MATCHED USER IN MIDDLEWARE?
-// FIGURE OUT HOW TO VERIFY TOKEN / LOGOUT/CLEARTOKEN IF TOKEN IS INVALID
 
