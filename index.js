@@ -8,7 +8,8 @@ const PORT = 8080;
 const cors = require("cors");
 
 const multer = require("multer");
-const upload = multer({ dest: './public/data/uploads/' });
+const { cloudinary, storage } = require("./config/cloudinaryConfig");
+const upload = multer({ storage });
 
 
 const axios = require("axios");
@@ -217,10 +218,8 @@ app.listen(PORT, console.log("SERVER RUNNING ON PORT 8080"))
 // send across data from current user to create user/:id
 
 
-// give option to edit profile on your own dashboard
 //logout after a week - res.status.send 403/401?
 // add friends component, you can click on friends profile and see their favorite gifs
-// create edit page
 
 
 // VERIFY TOKEN IN MIDDLEWARE
