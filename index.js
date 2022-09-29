@@ -7,6 +7,10 @@ const app = express();
 const PORT = 8080;
 const cors = require("cors");
 
+const multer = require("multer");
+const upload = multer({ dest: './public/data/uploads/' });
+
+
 const axios = require("axios");
 const giphyUrl = "https://api.giphy.com/v1/gifs/search";
 const giphyConfig = {
@@ -78,6 +82,24 @@ app.post("/register", async (req, res) => {
         token: currentToken,
         user: { ...newUser._doc, password: undefined }
     })
+})
+
+app.post("/user/edit", upload.single("profilePic"), async (req, res) => {
+    console.log(req.body)
+    console.log(req.file)
+
+    const recoveredToken = req.headers.token
+    try {
+        const decoded = jwt.verify(recoveredToken, jwtSecret)
+        const matchedUser = await User.findOneAndUpdate({ username: decoded.username }, req.file ? { profilePic: { url: req.file.path, filename: req.file.originalname } } : req.body, { new: true })
+        res.send({
+            user: { ...matchedUser._doc, password: undefined }
+        })
+    } catch (err) {
+        console.log("ERROR")
+        console.log(err)
+        res.send("error")
+    }
 })
 
 app.get("/user", async (req, res) => {
