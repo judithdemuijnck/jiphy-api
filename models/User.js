@@ -38,7 +38,11 @@ const userSchema = new mongoose.Schema({
         url: String,
         filename: String
     }),
-    favoriteGifs: [favoritesSchema]
+    favoriteGifs: [favoritesSchema],
+    friends: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    }]
 })
 
 module.exports = mongoose.model("User", userSchema)

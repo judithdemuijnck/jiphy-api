@@ -103,6 +103,54 @@ app.post("/user/edit", upload.single("profilePic"), async (req, res) => {
     }
 })
 
+app.get("/user/:userId", async (req, res) => {
+    const { userId } = req.params;
+    const recoveredToken = req.headers.token;
+    //make sure to verifyToken so onöly loggedIn users can get info
+    try {
+        const decoded = jwt.verify(recoveredToken, jwtSecret)
+        const matchedUser = await User.findOne({ _id: userId })
+        res.send({ user: { ...matchedUser._doc, password: undefined } })
+    } catch (err) {
+        console.log(err)
+        res.send(err)
+    }
+})
+
+app.get("/user/:userId/friend", async (req, res) => {
+    const { userId } = req.params;
+    const recoveredToken = req.headers.token
+    console.log("friend request received")
+    try {
+        const decoded = jwt.verify(recoveredToken, jwtSecret)
+        // matchedUser --> User making the request
+        const matchedUser = await User.findOne({ username: decoded.username })
+        // selectedUser --> User that has been requested
+        const selectedUser = await User.findOne({ _id: userId })
+        if (matchedUser.friends?.some(friend => friend._id.toHexString() === selectedUser._id.toHexString()) || selectedUser.friends?.some(friend => friend._id.toHexString() === matchedUser._id.toHexString())) {
+
+            matchedUser.friends.pull(selectedUser)
+            selectedUser.friends.pull(matchedUser)
+        } else {
+            matchedUser.friends.push(selectedUser)
+            selectedUser.friends.push(matchedUser)
+        }
+        // IS THERE A BETTER WAY FOR THE OBJECTS TO INTERACT? MONGOOSE.SCHEMA.TYPES.OBJECTID
+        await matchedUser.save()
+        await selectedUser.save()
+
+        res.send({
+            // currently I'm sending password in friends array --> FIX THIS
+            selectedUser: { ...selectedUser._doc, password: undefined },
+            matchedUser: { ...matchedUser._doc, password: undefined }
+        })
+    } catch (err) {
+        console.log(err)
+        res.send("something went wrong")
+    }
+
+})
+
 app.get("/user", async (req, res) => {
     const recoveredToken = req.headers.token
     try {
@@ -212,10 +260,9 @@ app.listen(PORT, console.log("SERVER RUNNING ON PORT 8080"))
 
 
 
-// connect user to individual user: user/:id
+
 // redirect user/dashboard to current user/:id
-// store token in DB, use this to check which user is currently logged in
-// send across data from current user to create user/:id
+
 
 
 //logout after a week - res.status.send 403/401?
@@ -225,3 +272,5 @@ app.listen(PORT, console.log("SERVER RUNNING ON PORT 8080"))
 // VERIFY TOKEN IN MIDDLEWARE
 // FIND MATCHED USER IN MIDDLEWARE?
 
+// forward user to user/dashboard or user/:ownUserId when loggedIn
+// set LOADING for React App
