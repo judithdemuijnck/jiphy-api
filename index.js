@@ -31,6 +31,7 @@ const saltRounds = 12;
 const jwt = require('jsonwebtoken');
 const jwtSecret = process.env.JWT_SECRET_KEY;
 
+const defaultAvatar = "https://images.unsplash.com/photo-1589652717521-10c0d092dea9?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=870&q=80";
 
 const gifCache = [];
 const favoriteGifs = [];
@@ -56,7 +57,7 @@ app.get("/", (req, res) => {
 
 app.post("/login", async (req, res) => {
     const { username, password } = req.body;
-    const matchedUser = await User.findOne({ username: username })
+    const matchedUser = await User.findOne({ username: username }).populate("friends")
     const isValid = await bcrypt.compare(password, matchedUser.password)
     console.log("login request received");
     if (isValid) {
@@ -76,7 +77,7 @@ app.post("/register", async (req, res) => {
     const { username, email, password } = req.body
     console.log("register request received")
     const hashedPw = await bcrypt.hash(password, saltRounds)
-    const newUser = new User({ username, email, password: hashedPw })
+    const newUser = new User({ username, email, password: hashedPw, profilePic: { url: defaultAvatar, filename: "default Avatar" } })
     await newUser.save();
     currentToken = jwt.sign({ username: username }, jwtSecret, { expiresIn: 604800 })
     res.send({
@@ -92,7 +93,7 @@ app.post("/user/edit", upload.single("profilePic"), async (req, res) => {
     const recoveredToken = req.headers.token
     try {
         const decoded = jwt.verify(recoveredToken, jwtSecret)
-        const matchedUser = await User.findOneAndUpdate({ username: decoded.username }, req.file ? { profilePic: { url: req.file.path, filename: req.file.originalname } } : req.body, { new: true })
+        const matchedUser = await User.findOneAndUpdate({ username: decoded.username }, req.file ? { profilePic: { url: req.file.path, filename: req.file.originalname } } : req.body, { new: true }).populate("friends")
         res.send({
             user: { ...matchedUser._doc, password: undefined }
         })
@@ -109,7 +110,7 @@ app.get("/user/:userId", async (req, res) => {
     //make sure to verifyToken so onöly loggedIn users can get info
     try {
         const decoded = jwt.verify(recoveredToken, jwtSecret)
-        const matchedUser = await User.findOne({ _id: userId })
+        const matchedUser = await User.findOne({ _id: userId }).populate("friends")
         res.send({ user: { ...matchedUser._doc, password: undefined } })
     } catch (err) {
         console.log(err)
@@ -124,9 +125,9 @@ app.get("/user/:userId/friend", async (req, res) => {
     try {
         const decoded = jwt.verify(recoveredToken, jwtSecret)
         // matchedUser --> User making the request
-        const matchedUser = await User.findOne({ username: decoded.username })
+        const matchedUser = await User.findOne({ username: decoded.username }).populate("friends")
         // selectedUser --> User that has been requested
-        const selectedUser = await User.findOne({ _id: userId })
+        const selectedUser = await User.findOne({ _id: userId }).populate("friends")
         if (matchedUser.friends?.some(friend => friend._id.toHexString() === selectedUser._id.toHexString()) || selectedUser.friends?.some(friend => friend._id.toHexString() === matchedUser._id.toHexString())) {
 
             matchedUser.friends.pull(selectedUser)
@@ -155,7 +156,8 @@ app.get("/user", async (req, res) => {
     const recoveredToken = req.headers.token
     try {
         const decoded = jwt.verify(recoveredToken, jwtSecret)
-        const matchedUser = await User.findOne({ username: decoded.username })
+        const matchedUser = await User.findOne({ username: decoded.username }).populate("friends")
+        console.log(matchedUser)
         res.send({ user: { ...matchedUser._doc, password: undefined } })
     } catch (err) {
         console.log("ERROR")
@@ -266,11 +268,9 @@ app.listen(PORT, console.log("SERVER RUNNING ON PORT 8080"))
 
 
 //logout after a week - res.status.send 403/401?
-// add friends component, you can click on friends profile and see their favorite gifs
 
 
 // VERIFY TOKEN IN MIDDLEWARE
 // FIND MATCHED USER IN MIDDLEWARE?
 
-// forward user to user/dashboard or user/:ownUserId when loggedIn
 // set LOADING for React App
