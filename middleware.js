@@ -14,5 +14,10 @@ module.exports.isLoggedIn = (req, res, next) => {
 }
 
 module.exports.isAuthorized = (req, res, next) => {
-    console.log("authorization middleware triggered")
+    const { userId } = req.params
+    if (res.locals.loggedInUserId === userId) {
+        next()
+    } else {
+        res.status(403).send({ error: "You are not authorized to do this." })
+    }
 }

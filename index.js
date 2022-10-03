@@ -26,7 +26,7 @@ const giphyConfig = {
 const mongoose = require("mongoose");
 const User = require("./models/User");
 
-const { isLoggedIn } = require("./middleware")
+const { isLoggedIn, isAuthorized } = require("./middleware")
 
 const bcrypt = require("bcrypt");
 const saltRounds = 12;
@@ -80,28 +80,14 @@ app.post("/register", async (req, res) => {
     const hashedPw = await bcrypt.hash(password, saltRounds)
     const newUser = new User({ username, email, password: hashedPw, profilePic: { url: defaultAvatar, filename: "default Avatar" } })
     await newUser.save();
-    const currentToken = jwt.sign({ userId: newUser._id }, jwtSecret, { expiresIn: 604800 })
+    const currentToken = jwt.sign({ userId: newUser._id.toHexString() }, jwtSecret, { expiresIn: 604800 })
     res.send({
         token: currentToken,
         user: { ...newUser._doc, password: undefined }
     })
 })
 
-app.post("/user/edit", isLoggedIn, upload.single("profilePic"), async (req, res) => {
-    console.log(req.body)
-    console.log(req.file)
 
-    try {
-        const matchedUser = await User.findOneAndUpdate({ _id: res.locals.loggedInUserId }, req.file ? { profilePic: { url: req.file.path, filename: req.file.originalname } } : req.body, { new: true }).populate("friends")
-        res.send({
-            user: { ...matchedUser._doc, password: undefined }
-        })
-    } catch (err) {
-        console.log("ERROR")
-        console.log(err)
-        res.send("error")
-    }
-})
 
 app.get("/user/:userId", isLoggedIn, async (req, res) => {
     const { userId } = req.params;
@@ -111,6 +97,23 @@ app.get("/user/:userId", isLoggedIn, async (req, res) => {
     } catch (err) {
         console.log(err)
         res.send(err)
+    }
+})
+
+app.post("/user/:userId/edit", isLoggedIn, isAuthorized, upload.single("profilePic"), async (req, res) => {
+    console.log(req.body)
+    console.log(req.file)
+    const { userId } = req.params;
+
+    try {
+        const matchedUser = await User.findOneAndUpdate({ _id: userId }, req.file ? { profilePic: { url: req.file.path, filename: req.file.originalname } } : req.body, { new: true }).populate("friends")
+        res.send({
+            user: { ...matchedUser._doc, password: undefined }
+        })
+    } catch (err) {
+        console.log("ERROR")
+        console.log(err)
+        res.send("error")
     }
 })
 
@@ -146,7 +149,7 @@ app.get("/user/:userId/friend", isLoggedIn, async (req, res) => {
 
 })
 
-app.get("/user", async (req, res) => {
+app.get("/user", isLoggedIn, async (req, res) => {
     try {
         const matchedUser = await User.findOne({ _id: res.locals.loggedInUserId }).populate("friends")
         console.log(matchedUser)
@@ -161,11 +164,9 @@ app.get("/user", async (req, res) => {
 
 app.get("/gifs/search", isLoggedIn, async (req, res) => {
     // grab favorites from currentUser
-    const recoveredToken = req.headers.token
     let currentUserFavorites = []
 
     if (res.locals.loggedInUserId) {
-        console.log("User is logged in")
         try {
             const matchedUser = await User.findOne({ _id: res.locals.loggedInUserId })
             currentUserFavorites = matchedUser.favoriteGifs
@@ -257,8 +258,9 @@ app.listen(PORT, console.log("SERVER RUNNING ON PORT 8080"))
 
 //logout after a week - res.status.send 403/401?
 
-
-// VERIFY TOKEN IN MIDDLEWARE
 // FIND MATCHED USER IN MIDDLEWARE?
 
 // set LOADING for React App
+
+// store gifCache in session/cookies?
+// remove isFavorite from gif, handle in client
