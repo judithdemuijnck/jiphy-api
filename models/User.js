@@ -1,13 +1,4 @@
-// store in DB
-// access from DB
-// create login - hash password, compare to hashed password
-// send out JWT
-// compare JWT so User only sees their own dashboard
-
-// figure out how to get JWT
-
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
 
 const favoritesSchema = new mongoose.Schema({
     _id: String,
