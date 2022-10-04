@@ -16,46 +16,35 @@ const giphyConfig = {
 
 const { isLoggedIn } = require("../middleware")
 
-const gifCache = []
-const favoriteGifs = []
 
-router.route("/")
-    .get((req, res) => {
-        res.send(gifCache)
-    })
+
+// router.route("/")
+//     .get((req, res) => {
+//         res.send(gifCache)
+//     })
 
 router.route("/search")
     .get(async (req, res) => {
-
-        const { searchTerm } = req.query;
+        const { searchTerm, offset } = req.query;
         giphyConfig.params.q = searchTerm;
-        if (gifCache.length > 0) {
-            if (gifCache[0].searchTerm === searchTerm) {
-                giphyConfig.params.offset += 24;
-            } else {
-                giphyConfig.params.offset = 0;
-                gifCache.length = 0;
-            }
-        }
+        giphyConfig.params.offset = offset ? JSON.parse(offset) : undefined
+
         const response = await axios.get(giphyUrl, giphyConfig);
-        const gifData = response.data.data
-        for (let gif of gifData) {
+        const gifData = []
+        for (let gif of response.data.data) {
             newGif = {
                 _id: gif.id,
                 searchTerm: searchTerm,
                 title: gif.title,
                 url: gif.images.original.url,
             }
-            gifCache.push(newGif)
+            gifData.push(newGif)
         }
-        res.send(gifCache);
+        res.send(gifData);
     })
 
 
 router.route("/favorites")
-    .get((req, res) => {
-        res.send(favoriteGifs)
-    })
     .post(isLoggedIn, async (req, res) => {
         const { favoriteGif } = req.body;
 
@@ -66,18 +55,9 @@ router.route("/favorites")
             if (matchedUser.favoriteGifs?.some(gif => gif._id === favoriteGif._id)) {
                 matchedUser.favoriteGifs.pull({ _id: favoriteGif._id })
             } else {
-                // favoriteGif.isFavorite = true;
                 matchedUser.favoriteGifs.push(favoriteGif)
             }
             await matchedUser.save()
-
-            // // add/remove favorite to/from gifCache
-            // for (let gif of gifCache) {
-            //     if (gif._id === favoriteGif._id) {
-            //         gif.isFavorite = !gif.isFavorite;
-            //         break
-            //     }
-            // }
 
             res.send({
                 user: { ...matchedUser._doc, password: undefined }
