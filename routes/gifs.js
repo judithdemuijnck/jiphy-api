@@ -1,9 +1,6 @@
 const express = require("express");
 const router = express.Router();
 
-const jwt = require('jsonwebtoken');
-const jwtSecret = process.env.JWT_SECRET_KEY;
-
 const User = require("../models/User.js")
 
 const axios = require("axios");
@@ -29,19 +26,6 @@ router.route("/")
 
 router.route("/search")
     .get(async (req, res) => {
-        // grab favorites from currentUser
-        let currentUserFavorites = []
-
-        if (req.headers.token !== "null") {
-            try {
-                const decoded = jwt.verify(req.headers.token, jwtSecret)
-                const matchedUser = await User.findOne({ _id: decoded.userId })
-                currentUserFavorites = matchedUser.favoriteGifs
-            } catch (err) {
-                console.log("error while matching user to DB")
-            }
-        }
-
 
         const { searchTerm } = req.query;
         giphyConfig.params.q = searchTerm;
@@ -61,7 +45,6 @@ router.route("/search")
                 searchTerm: searchTerm,
                 title: gif.title,
                 url: gif.images.original.url,
-                isFavorite: currentUserFavorites.some(el => el._id === gif.id) ? true : false
             }
             gifCache.push(newGif)
         }
@@ -83,18 +66,18 @@ router.route("/favorites")
             if (matchedUser.favoriteGifs?.some(gif => gif._id === favoriteGif._id)) {
                 matchedUser.favoriteGifs.pull({ _id: favoriteGif._id })
             } else {
-                favoriteGif.isFavorite = true;
+                // favoriteGif.isFavorite = true;
                 matchedUser.favoriteGifs.push(favoriteGif)
             }
             await matchedUser.save()
 
-            // add/remove favorite to/from gifCache
-            for (let gif of gifCache) {
-                if (gif._id === favoriteGif._id) {
-                    gif.isFavorite = !gif.isFavorite;
-                    break
-                }
-            }
+            // // add/remove favorite to/from gifCache
+            // for (let gif of gifCache) {
+            //     if (gif._id === favoriteGif._id) {
+            //         gif.isFavorite = !gif.isFavorite;
+            //         break
+            //     }
+            // }
 
             res.send({
                 user: { ...matchedUser._doc, password: undefined }
