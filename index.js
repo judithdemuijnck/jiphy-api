@@ -12,6 +12,7 @@ const mongoose = require("mongoose");
 // ROUTES
 const gifsRoute = require("./routes/gifs")
 const userRoute = require("./routes/user")
+const accountsRoute = require("./routes/accounts")
 
 // Setting up connection to Database
 mongoose.connect("mongodb://localhost:27017/jiphy")
@@ -30,6 +31,7 @@ app.use(express.urlencoded({ extended: true }))
 // ROUTES
 app.use("/gifs", gifsRoute)
 app.use("/user", userRoute)
+app.use("/accounts", accountsRoute)
 
 app.get("/", (req, res) => {
     res.send("Nothing here")
@@ -52,4 +54,3 @@ app.listen(PORT, console.log(`SERVER RUNNING ON PORT ${PORT}`))
 // set LOADING for React App
 
 // store gifCache in session/cookies?
-// remove isFavorite from gif, handle in client
