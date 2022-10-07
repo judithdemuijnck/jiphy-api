@@ -23,11 +23,12 @@ router.route("/login")
             res.send({
                 token: currentToken,
                 //spreads contents into user without password
-                user: { ...matchedUser._doc, password: undefined }
+                user: { ...matchedUser._doc, password: undefined },
+                flash: "Successfully logged in"
             })
         } else {
             res.status(401).send({
-                error: "Incorrect username or password. Please try again."
+                flash: "Incorrect username or password. Please try again."
             })
             // send error message -- like a flash?
         }
@@ -38,13 +39,24 @@ router.route("/register")
         const { username, email, password } = req.body
         console.log("register request received")
         const hashedPw = await bcrypt.hash(password, saltRounds)
-        const newUser = new User({ username, email, password: hashedPw, profilePic: { url: defaultAvatar, filename: "default Avatar" } })
-        await newUser.save();
-        const currentToken = jwt.sign({ userId: newUser._id.toHexString() }, jwtSecret, { expiresIn: 604800 })
-        res.send({
-            token: currentToken,
-            user: { ...newUser._doc, password: undefined }
-        })
+        try {
+            const newUser = new User({ username, email, password: hashedPw, profilePic: { url: defaultAvatar, filename: "default Avatar" } })
+            await newUser.save();
+            const currentToken = jwt.sign({ userId: newUser._id.toHexString() }, jwtSecret, { expiresIn: 604800 })
+            res.send({
+                token: currentToken,
+                user: { ...newUser._doc, password: undefined },
+                flash: "Successfully signed up"
+            })
+        } catch (err) {
+            // Is this the correct status code?
+            res.status(409).send({
+                flash: "Username or email address already in use. Please try again."
+            })
+        }
+
     })
+
+
 
 module.exports = router;

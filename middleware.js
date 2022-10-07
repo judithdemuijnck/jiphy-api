@@ -9,7 +9,7 @@ module.exports.isLoggedIn = (req, res, next) => {
         next()
     } catch (err) {
         console.log("error while validating token")
-        res.status(401).send({ error: "Token invalid/missing. Please try again." })
+        res.status(401).send({ flash: "You need to be logged in to do this." })
     }
 }
 
@@ -18,6 +18,6 @@ module.exports.isAuthorized = (req, res, next) => {
     if (res.locals.loggedInUserId === userId) {
         next()
     } else {
-        res.status(403).send({ error: "You are not authorized to do this." })
+        res.status(403).send({ flash: "You are not authorized to do this." })
     }
 }

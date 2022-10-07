@@ -41,16 +41,6 @@ app.listen(PORT, console.log(`SERVER RUNNING ON PORT ${PORT}`))
 
 
 
-
-
-// redirect user/dashboard to current user/:id
-
-
-
-//logout after a week - res.status.send 403/401?
-
-// FIND MATCHED USER IN MIDDLEWARE?
-
 // set LOADING for React App
 
-// store gifCache in session/cookies?
+

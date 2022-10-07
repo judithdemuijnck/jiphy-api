@@ -16,8 +16,7 @@ router.route("/")
             res.send({ user: { ...matchedUser._doc, password: undefined } })
         } catch (err) {
             console.log("ERROR")
-            res.status(401).send({ error: "Token invalid/missing. Please login again" })
-            // do sth in client --> log user out / clear token / throw 401 error / send flash
+            res.status(401).send({ flash: "Session expired. Please login again." })
         }
     })
 
@@ -30,7 +29,7 @@ router.route("/:userId")
             res.send({ user: { ...matchedUser._doc, password: undefined } })
         } catch (err) {
             console.log(err)
-            res.status(404).send({ error: "User not found" })
+            res.status(404).send({ flash: "User not found" })
         }
     })
 
@@ -47,12 +46,12 @@ router.route("/:userId/edit")
                 { new: true })
                 .populate("friends")
             res.send({
-                user: { ...matchedUser._doc, password: undefined }
+                user: { ...matchedUser._doc, password: undefined },
+                flash: "Changes successfully made"
             })
         } catch (err) {
-            console.log("ERROR")
             console.log(err)
-            res.status(400).send({ error: "Something went wrong" })
+            res.status(400).send({ flash: "Something went wrong. Please try again." })
         }
     })
 
@@ -86,7 +85,7 @@ router.route("/:userId/friend")
             })
         } catch (err) {
             console.log(err)
-            res.send("something went wrong")
+            res.status(400).send({ flash: "Something went wrong" })
         }
     })
 

@@ -28,19 +28,24 @@ router.route("/search")
         const { searchTerm, offset } = req.query;
         giphyConfig.params.q = searchTerm;
         giphyConfig.params.offset = offset ? JSON.parse(offset) : undefined
-
-        const response = await axios.get(giphyUrl, giphyConfig);
-        const gifData = []
-        for (let gif of response.data.data) {
-            newGif = {
-                _id: gif.id,
-                searchTerm: searchTerm,
-                title: gif.title,
-                url: gif.images.original.url,
+        try {
+            const response = await axios.get(giphyUrl, giphyConfig);
+            const gifData = []
+            for (let gif of response.data.data) {
+                newGif = {
+                    _id: gif.id,
+                    searchTerm: searchTerm,
+                    title: gif.title,
+                    url: gif.images.original.url,
+                }
+                gifData.push(newGif)
             }
-            gifData.push(newGif)
+            res.send(gifData);
+        } catch (err) {
+            console.log(err)
+            res.status(500).send({ flash: "Something went wrong" })
         }
-        res.send(gifData);
+
     })
 
 
@@ -62,10 +67,9 @@ router.route("/favorites")
             res.send({
                 user: { ...matchedUser._doc, password: undefined }
             })
-
         } catch (err) {
-            console.log("Problem")
-            res.send("Something went wrong")
+            console.log(err)
+            res.status(400).send({ flash: "Something went wrong" })
         }
     })
 
