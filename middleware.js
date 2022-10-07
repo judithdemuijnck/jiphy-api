@@ -9,6 +9,7 @@ module.exports.isLoggedIn = (req, res, next) => {
         next()
     } catch (err) {
         console.log("error while validating token")
+        console.log(err)
         res.status(401).send({ flash: "You need to be logged in to do this." })
     }
 }
