@@ -34,7 +34,6 @@ module.exports.getUserData = async (req, res) => {
 
 module.exports.editUserData = async (req, res) => {
     const { userId } = req.params;
-
     try {
         const matchedUser = await User.findOneAndUpdate(
             { _id: userId },
@@ -75,7 +74,6 @@ module.exports.editFriends = async (req, res) => {
             loggedInUser.friends.push(selectedUser)
             selectedUser.friends.push(loggedInUser)
         }
-        // IS THERE A BETTER WAY FOR THE OBJECTS TO INTERACT/DEPEND? MONGOOSE.SCHEMA.TYPES.OBJECTID
         await loggedInUser.save()
         await selectedUser.save()
 

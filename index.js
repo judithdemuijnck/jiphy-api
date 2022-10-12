@@ -8,20 +8,20 @@ const PORT = 8080;
 const cors = require("cors");
 
 const mongoose = require("mongoose");
+const dbUrl = process.env.MONGO_DB_URL
 
 // ROUTES
 const gifsRoute = require("./routes/gifs")
-const userRoute = require("./routes/user")
+const userRoute = require("./routes/users")
 const accountsRoute = require("./routes/accounts")
 
 // Setting up connection to Database
-mongoose.connect("mongodb://localhost:27017/jiphy")
+mongoose.connect(dbUrl || "mongodb://localhost:27017/jiphy")
     .then(() => console.log("DATABASE CONNECTED"))
     .catch(err => {
         console.log("DB CONNECTION ERROR")
         console.log(err)
     })
-
 
 // MIDDLEWARE
 app.use(cors());
@@ -30,7 +30,7 @@ app.use(express.urlencoded({ extended: true }))
 
 // ROUTES
 app.use("/gifs", gifsRoute)
-app.use("/user", userRoute)
+app.use("/users", userRoute)
 app.use("/accounts", accountsRoute)
 
 app.get("/", (req, res) => {
@@ -39,8 +39,5 @@ app.get("/", (req, res) => {
 
 app.listen(PORT, console.log(`SERVER RUNNING ON PORT ${PORT}`))
 
-
-
-// set LOADING for React App
 
 
