@@ -34,6 +34,7 @@ app.use("/users", userRoute)
 app.use("/accounts", accountsRoute)
 
 app.get("/", (req, res) => {
+    // SE: Best practice: Best just to send a 404 here - at the moment this returns 200
     res.send("Nothing here")
 })
 

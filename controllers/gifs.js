@@ -18,6 +18,7 @@ module.exports.searchGifs = async (req, res) => {
     try {
         const response = await axios.get(giphyUrl, giphyConfig);
         const gifData = []
+        // SE: Good practice: You could use Array.map here! But this works fine
         for (let gif of response.data.data) {
             newGif = {
                 _id: gif.id,
@@ -41,6 +42,7 @@ module.exports.seeFavoriteGifs = async (req, res) => {
         res.send({ favorites: matchedUser.favoriteGifs })
     } catch (err) {
         console.log(err)
+        // SE: Good Practice: See users for an example of how to handle this in the try block
         res.status(404).send({ flash: "User not found" })
     }
 }
@@ -50,6 +52,7 @@ module.exports.favoriteGif = async (req, res) => {
     try {
         const matchedUser = await User.findOne({ _id: res.locals.loggedInUserId })
         // add or remove favoriteGif to/from DB favoriteGifs
+        // SE: Good Practice: See users line 85 for example of how to extract into util functions for readability
         if (matchedUser.favoriteGifs?.some(gif => gif._id === favoriteGif._id)) {
             matchedUser.favoriteGifs.pull({ _id: favoriteGif._id })
         } else {
