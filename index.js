@@ -1,3 +1,4 @@
+// SE: good practice: can't leave a comment in package.json, so leaving it here. Maybe add a run script? run: node index.js
 if (process.env.NODE_ENV !== "production") {
     require("dotenv").config();
 }
