@@ -8,6 +8,14 @@ const favoritesSchema = new mongoose.Schema({
     url: String
 })
 
+const profilePicSchema = new mongoose.Schema({
+    url: {
+        type: String,
+        required: true
+    },
+    filename: String
+})
+
 const userSchema = new mongoose.Schema({
     username: {
         type: String,
@@ -25,11 +33,7 @@ const userSchema = new mongoose.Schema({
     },
     location: String,
     description: String,
-    // SE: Good Practice: Could this schema be extracted to its own constant?
-    profilePic: new mongoose.Schema({
-        url: String,
-        filename: String
-    }),
+    profilePic: profilePicSchema,
     favoriteGifs: [favoritesSchema],
     friends: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -38,12 +42,31 @@ const userSchema = new mongoose.Schema({
 })
 
 // SE: See comment in users.js line 10
-//const User = mongoose.model("User", userSchema)
-// UserSchema.methods.toJSON = function() {
+// userSchema.methods.toJSON = function () {
+//     // JdM: why are you using var here?
 //     var obj = this.toObject();
 //     delete obj.password;
 //     return obj;
-//    }
-//module.exports = User
+// }
+
+//JdM: I couldn't get your solution to work (not sure why :( ), 
+// but this solution from mongoose docs works:
+if (!userSchema.options.toJSON) userSchema.options.toJSON = {};
+userSchema.options.toJSON.transform = function (doc, ret) {
+    delete ret.password
+    return ret
+}
+
+const autoPopulateFriends = function (next) {
+    this.populate("friends");
+    next();
+}
+
+//J dM: I was trying to autopopulate friends, but neither pre nor post is working
+// Is there a way to autpopulate friends?
+
+// userSchema
+//     .pre("findOne", autoPopulateFriends)
+//     .pre("find", autoPopulateFriends)
 
 module.exports = mongoose.model("User", userSchema)

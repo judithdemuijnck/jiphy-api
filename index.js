@@ -1,4 +1,3 @@
-// SE: good practice: can't leave a comment in package.json, so leaving it here. Maybe add a run script? run: node index.js
 if (process.env.NODE_ENV !== "production") {
     require("dotenv").config();
 }
@@ -35,8 +34,7 @@ app.use("/users", userRoute)
 app.use("/accounts", accountsRoute)
 
 app.get("/", (req, res) => {
-    // SE: Best practice: Best just to send a 404 here - at the moment this returns 200
-    res.send("Nothing here")
+    res.status(400).send("Nothing here")
 })
 
 app.listen(PORT, console.log(`SERVER RUNNING ON PORT ${PORT}`))

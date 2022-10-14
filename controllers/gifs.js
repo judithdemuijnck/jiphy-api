@@ -1,4 +1,5 @@
 const User = require("../models/User.js")
+const { sendStatus } = require("../utils/sendStatus")
 
 const axios = require("axios");
 const giphyUrl = "https://api.giphy.com/v1/gifs/search";
@@ -11,59 +12,74 @@ const giphyConfig = {
     }
 };
 
-module.exports.searchGifs = async (req, res) => {
+const genericErrorMsg = "Something went wrong."
+const userErrorMsg = "User not found."
+
+// JdM: Should I move any of these into a differnt (e.g utils) file/folder?
+function isAlreadyInFavorites(user, gif) {
+    return user.favoriteGifs?.some(favGif => favGif._id === gif._id)
+}
+
+function addToFavorites(user, gif) {
+    user.favoriteGifs.push(gif)
+}
+
+function removeFromFavorites(user, gif) {
+    user.favoriteGifs.pull(gif)
+}
+
+const searchGifs = async (req, res) => {
     const { searchTerm, offset } = req.query;
     giphyConfig.params.q = searchTerm;
     giphyConfig.params.offset = offset ? JSON.parse(offset) : 0
     try {
         const response = await axios.get(giphyUrl, giphyConfig);
-        const gifData = []
-        // SE: Good practice: You could use Array.map here! But this works fine
-        for (let gif of response.data.data) {
-            newGif = {
+        const gifData = response.data.data.map(gif => {
+            return {
                 _id: gif.id,
                 searchTerm: searchTerm,
                 title: gif.title,
-                url: gif.images.original.url,
+                url: gif.images.original.url
             }
-            gifData.push(newGif)
-        }
+        })
         res.send(gifData);
     } catch (err) {
-        console.log(err)
-        res.status(500).send({ flash: "Something went wrong" })
+        console.error(err)
+        sendStatus(res, 500, genericErrorMsg)
     }
 }
 
-module.exports.seeFavoriteGifs = async (req, res) => {
-    const { userId } = req.query
+const seeFavoriteGifs = (req, res) => {
     try {
-        matchedUser = await User.findOne({ _id: userId })
+        matchedUser = res.locals.matchedUser
         res.send({ favorites: matchedUser.favoriteGifs })
     } catch (err) {
-        console.log(err)
-        // SE: Good Practice: See users for an example of how to handle this in the try block
-        res.status(404).send({ flash: "User not found" })
+        console.error(err)
+        sendStatus(res, 500, genericErrorMsg)
     }
 }
 
-module.exports.favoriteGif = async (req, res) => {
+const toggleFavoriteGif = async (req, res) => {
     const { favoriteGif } = req.body;
     try {
-        const matchedUser = await User.findOne({ _id: res.locals.loggedInUserId })
-        // add or remove favoriteGif to/from DB favoriteGifs
-        // SE: Good Practice: See users line 85 for example of how to extract into util functions for readability
-        if (matchedUser.favoriteGifs?.some(gif => gif._id === favoriteGif._id)) {
-            matchedUser.favoriteGifs.pull({ _id: favoriteGif._id })
+        const loggedInUser = res.locals.loggedInUser
+        if (!loggedInUser) {
+            sendStatus(res, 404, userErrorMsg)
         } else {
-            matchedUser.favoriteGifs.push(favoriteGif)
+            if (isAlreadyInFavorites(loggedInUser, favoriteGif)) {
+                removeFromFavorites(loggedInUser, favoriteGif)
+            } else {
+                addToFavorites(loggedInUser, favoriteGif)
+            }
+            await loggedInUser.save()
+            res.send({
+                user: { ...loggedInUser.toJSON() }
+            })
         }
-        await matchedUser.save()
-        res.send({
-            user: { ...matchedUser._doc, password: undefined }
-        })
     } catch (err) {
-        console.log(err)
-        res.status(400).send({ flash: "Something went wrong" })
+        console.error(err)
+        sendStatus(res, 500, genericErrorMsg)
     }
 }
+
+module.exports = { searchGifs, seeFavoriteGifs, toggleFavoriteGif }

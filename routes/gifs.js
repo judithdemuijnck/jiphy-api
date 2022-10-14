@@ -3,7 +3,7 @@ const router = express.Router();
 
 const gifs = require("../controllers/gifs")
 
-const { isLoggedIn } = require("../middleware")
+const { isLoggedIn, userIsFound } = require("../middleware")
 
 
 router.route("/")
@@ -11,8 +11,8 @@ router.route("/")
 
 
 router.route("/favorites")
-    .get(isLoggedIn, gifs.seeFavoriteGifs)
-    .post(isLoggedIn, gifs.favoriteGif)
+    .get(isLoggedIn, userIsFound, gifs.seeFavoriteGifs)
+    .post(isLoggedIn, gifs.toggleFavoriteGif)
 
 module.exports = router
 

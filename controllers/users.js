@@ -1,113 +1,98 @@
 const User = require("../models/User")
+const { sendStatus } = require("../utils/sendStatus")
 
+const genericErrorMsg = "Something went wrong."
+const userErrorMsg = "User not found."
 
-// SE: Good practice: Perhaps rename this getUserById?
-async function matchUserToDB(userId) {
-    const user = await User.findOne({ _id: userId }).populate("friends")
-    return user
-}
-
-// SE: Good practice: This might be a little brittle! What if we forgot to invoke this at some point? It would be better if Mongoose knew NEVER to send back a password. Heres how you do this.
-// Actually I've written the solution in models/User.js
 function sendUserData(user) {
-    // removes password from populated user.friends
-    const userFriends = user.friends.map(friend => ({ ...friend._doc, password: undefined }))
-    return { ...user._doc, password: undefined, friends: userFriends }
+    return { user: { ...user.toJSON() } }
 }
 
-module.exports.getCurrentUserData = async (req, res) => {
+// JdM: Should I move any of these into a differnt (e.g utils) file/folder?
+function removeUserFromFriends(user1, user2) {
+    user1.friends.pull(user2)
+    user2.friends.pull(user1)
+}
+
+function addUserToFriends(user1, user2) {
+    user1.friends.push(user2)
+    user2.friends.push(user1)
+}
+
+function isAlreadyInFriends(user1, user2) {
+    const user1IsInUser2Friends = user2.friends?.some(friend => friend._id.toHexString() === user1._id.toHexString())
+    const user2IsInUser1Friends = user1.friends?.some(friend => friend._id.toHexString() === user2._id.toHexString())
+    return user1IsInUser2Friends || user2IsInUser1Friends
+}
+
+const getLoggedInUserData = (req, res) => {
     try {
-        const matchedUser = await User.findOne({ _id: res.locals.loggedInUserId }).populate("friends")
-        res.send({ user: sendUserData(matchedUser) })
+        const loggedInUser = res.locals.loggedInUser
+        res.send(sendUserData(loggedInUser))
     } catch (err) {
-        // SE: Good Practice: Think about the severity of this console.log, think about the payload that its logging
-        // If you looked at the terminal, would it show you the error?
-        // Absolute good practice would be to declare a logging function, even if for now that just writes to the console
-        // i.e logger.js
-        // const logger = () => ({
-        //   error: (error) => console.error(error)
-        // })
-        console.log("ERROR")
-        // SE: Question: Do we know its because the session expired here? I suspect thats more likely in the event that the JWT expires (which is handled in the middleware)
-        // I would therefore expect this catch to be in the event the database is borked - which is a 500 status response.
-        res.status(401).send({ flash: "Session expired. Please login again." })
+        console.error(err)
+        sendStatus(res, 500, genericErrorMsg)
     }
 }
 
-module.exports.getUserData = async (req, res) => {
-    const { userId } = req.params;
+const getUserData = (req, res) => {
     try {
-        const matchedUser = await matchUserToDB(userId)
-        res.send({ user: sendUserData(matchedUser) })
+        const matchedUser = res.locals.matchedUser
+        res.send(sendUserData(matchedUser))
     } catch (err) {
-        // SE: Good practice: So the error you're actually getting here is TypeError: Cannot read properties of null (reading 'friends') - which indicates in sendUserData you're trying to map over something that doesn't exist. 
-        // The best practice would be to handle this case in the try block as soon as we know matchedUser is undefined/null.
-        // if (!matcheduser) {
-        //    res.status(404).send({ flash: "User not found" })
-        //
-        // SE: Good practice: is console log the right method for an error? 
-        console.log(err)
-        res.status(404).send({ flash: "User not found" })
+        console.error(err)
+        // JdM: What is the difference between console.log(error) and console.error(error)?
+        sendStatus(res, 500, genericErrorMsg)
     }
 }
 
-module.exports.editUserData = async (req, res) => {
-    const { userId } = req.params;
+const editUserData = async (req, res) => {
     try {
         const matchedUser = await User.findOneAndUpdate(
-            { _id: userId },
+            { _id: res.locals.matchedUser._id },
             req.file ? { profilePic: { url: req.file.path, filename: req.file.originalname } } : req.body,
             { new: true })
             .populate("friends")
         res.send({
-            user: sendUserData(matchedUser),
+            ...sendUserData(matchedUser),
             flash: "Changes successfully made"
         })
     } catch (err) {
-        console.log(err)
-        res.status(400).send({ flash: "Something went wrong. Please try again." })
+        console.error(err)
+        sendStatus(res, 500, genericErrorMsg)
     }
 }
 
-module.exports.getFriends = async (req, res) => {
-    const { userId } = req.params;
+const getFriends = (req, res) => {
     try {
-        const matchedUser = await matchUserToDB(userId)
+        const matchedUser = res.locals.matchedUser
         res.send({ friends: matchedUser.friends })
     } catch (err) {
-        console.log(err)
-        // SE: Good practice: This catch block won't actually be called if you don't find the user - see line 43 for how to handle this in the try block
-        res.status(404).send({ flash: "Couldn't find what you're looking for" })
+        console.error(err)
+        sendStatus(res, 404, "Couldn't find what you're looking for.")
     }
 }
 
-module.exports.editFriends = async (req, res) => {
-    // SE: Question: Is this the friends userID? If so maybe do const { userId: targetUserId } = req.params; to make it more explicit
-    const { userId } = req.params;
+const editFriends = async (req, res) => {
     try {
-        const loggedInUser = await matchUserToDB(res.locals.loggedInUserId)
-        // selectedUser --> friend requested User
-        const selectedUser = await matchUserToDB(userId)
-        // SE: Best practice: The next line can be hard to read! It would be better if we moved each part of the if statement into functions, i.e. isLoggedInUserInTargetUserFriends || isTargetUserInLoggedInUserFriends
-        if (loggedInUser.friends?.some(friend => friend._id.toHexString() === selectedUser._id.toHexString()) || selectedUser.friends?.some(friend => friend._id.toHexString() === loggedInUser._id.toHexString())) {
-            // SE: Best Practice:  I had to go to the docs to see what friends.pull does ! Maybe move into a util function (removeUserFromFriends)
-            loggedInUser.friends.pull(selectedUser)
-            selectedUser.friends.pull(loggedInUser)
+        const targetUser = res.locals.matchedUser
+        const loggedInUser = res.locals.loggedInUser
+        if (isAlreadyInFriends(targetUser, loggedInUser)) {
+            removeUserFromFriends(targetUser, loggedInUser)
         } else {
-            // SE: Best Practice: I had to go to the docs to see what friends.push does ! Maybe move into a util function (addUserToFriends)
-            loggedInUser.friends.push(selectedUser)
-            selectedUser.friends.push(loggedInUser)
+            addUserToFriends(loggedInUser, targetUser)
         }
         await loggedInUser.save()
-        await selectedUser.save()
+        await targetUser.save()
 
         res.send({
-            selectedUser: sendUserData(selectedUser),
-            loggedInUser: sendUserData(loggedInUser)
+            selectedUser: { ...sendUserData(targetUser).user },
+            loggedInUser: { ...sendUserData(loggedInUser).user }
         })
     } catch (err) {
-        console.log(err)
-        // SE: Best Practice: 400 indicates something went wrong with the user request - 500 would be more apt here as its more likely the DB / our code thats messed up
-        res.status(400).send({ flash: "Something went wrong" })
+        console.error(err)
+        sendStatus(res, 500, genericErrorMsg)
     }
 }
+
+module.exports = { getLoggedInUserData, getUserData, editUserData, getFriends, editFriends }

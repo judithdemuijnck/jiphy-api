@@ -1,18 +1,25 @@
 const jwt = require('jsonwebtoken');
 const jwtSecret = process.env.JWT_SECRET_KEY;
 
-module.exports.isLoggedIn = (req, res, next) => {
+const User = require("./models/User")
+const { sendStatus } = require("./utils/sendStatus")
+
+module.exports.isLoggedIn = async (req, res, next) => {
     const recoveredToken = req.headers.token
     try {
-        // SE: Praise: This is great Jude! An understanding of JWTs will go a long way. I was asked this in a recent SENIOR interview :)
         const decodedToken = jwt.verify(recoveredToken, jwtSecret)
-        res.locals.loggedInUserId = decodedToken.userId
-        next()
+        const matchedUser = await User.findById({ _id: decodedToken.userId })
+        if (!matchedUser) {
+            return sendStatus(res, 404, "User not found.")
+        } else {
+            res.locals.loggedInUserId = decodedToken.userId
+            res.locals.loggedInUser = matchedUser
+            next()
+        }
     } catch (err) {
         console.log("error while validating token")
-        console.log(err)
-        // SE: Good practice: you need to return these statements - otherwise the next middleware will start running!
-        res.status(401).send({ flash: "You need to be logged in to do this." })
+        console.error(err)
+        return sendStatus(res, 401, "You need to be logged in to do this.")
     }
 }
 
@@ -21,7 +28,24 @@ module.exports.isAuthorized = (req, res, next) => {
     if (res.locals.loggedInUserId === userId) {
         next()
     } else {
-        // SE: Good practice: you need to return these statements - otherwise the next middleware will start running!
-        res.status(403).send({ flash: "You are not authorized to do this." })
+        return sendStatus(res, 403, "You are not authorized to do this.")
+    }
+}
+
+// JdM: Is it ok that I moved this into middleware?
+module.exports.userIsFound = async (req, res, next) => {
+    const { userId } = Object.keys(req.params).length !== 0 ? req.params : req.query
+    try {
+        const matchedUser = await User.findOne({ _id: userId }).populate("friends")
+        if (matchedUser) {
+            res.locals.matchedUser = matchedUser;
+            next()
+        } else {
+            return sendStatus(res, 404, "User not found.")
+        }
+    } catch (err) {
+        console.error(err)
+        // 400 because of faulty userId / wrong format
+        return sendStatus(res, 400, "There is nothing here.")
     }
 }
