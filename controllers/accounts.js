@@ -15,11 +15,15 @@ function sendResponse(User, flashMsg) {
     return {
         token: createToken(User._id),
         //spreads contents into user without password
+        // SE: good practice: See note in Users.js about overwriting the toJSON method in mongoose
         user: { ...User._doc, password: undefined },
         flash: `Successfully ${flashMsg}`
     }
 }
 
+// SE: GoodPractice: I'd probably declare this as a const and then export the object at the end, i.e
+// const loginUser = () => {...}
+// module.exports = { loginuser }
 module.exports.loginUser = async (req, res) => {
     const { username, password } = req.body;
     try {
@@ -36,6 +40,7 @@ module.exports.loginUser = async (req, res) => {
     } catch (err) {
         console.log(err)
         res.status(401).send({
+            // SE: Good practice: We're writing these 3 lines quite a lot - could we declare a function that we pass a status code and message to instead?
             flash: "Incorrect username or password. Please try again."
         })
     }
@@ -51,6 +56,10 @@ module.exports.registerUser = async (req, res) => {
     } catch (err) {
         console.log(err)
         // Is this the correct status code?
+        // SE: Good question, its not technically wrong! But the convention in authorization is:
+        // - The users credentials were wrong - 401
+        // - The users credentials were right but they don't have permission - 403
+        // - So in this case, a 401 would be appropriate.
         res.status(409).send({
             flash: "Username or email address already in use. Please try again."
         })

@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema({
     },
     location: String,
     description: String,
+    // SE: Good Practice: Could this schema be extracted to its own constant?
     profilePic: new mongoose.Schema({
         url: String,
         filename: String
@@ -35,5 +36,14 @@ const userSchema = new mongoose.Schema({
         ref: "User"
     }]
 })
+
+// SE: See comment in users.js line 10
+//const User = mongoose.model("User", userSchema)
+// UserSchema.methods.toJSON = function() {
+//     var obj = this.toObject();
+//     delete obj.password;
+//     return obj;
+//    }
+//module.exports = User
 
 module.exports = mongoose.model("User", userSchema)
