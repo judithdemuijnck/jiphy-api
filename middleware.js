@@ -33,10 +33,11 @@ module.exports.isAuthorized = (req, res, next) => {
 }
 
 // JdM: Is it ok that I moved this into middleware?
+// SE: answer: yeah I believe so - you're only scoping it to certain routes so I don't see any issue here.
 module.exports.userIsFound = async (req, res, next) => {
     const { userId } = Object.keys(req.params).length !== 0 ? req.params : req.query
     try {
-        const matchedUser = await User.findOne({ _id: userId }).populate("friends")
+        const matchedUser = await User.findOne({ _id: userId })
         if (matchedUser) {
             res.locals.matchedUser = matchedUser;
             next()
@@ -46,6 +47,7 @@ module.exports.userIsFound = async (req, res, next) => {
     } catch (err) {
         console.error(err)
         // 400 because of faulty userId / wrong format
+        // SE: nitpick: is the message right here?
         return sendStatus(res, 400, "There is nothing here.")
     }
 }

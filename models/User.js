@@ -51,6 +51,7 @@ const userSchema = new mongoose.Schema({
 
 //JdM: I couldn't get your solution to work (not sure why :( ), 
 // but this solution from mongoose docs works:
+// SE: answer: super! its possible my fix is outdated. If it works it works!
 if (!userSchema.options.toJSON) userSchema.options.toJSON = {};
 userSchema.options.toJSON.transform = function (doc, ret) {
     delete ret.password
@@ -64,9 +65,11 @@ const autoPopulateFriends = function (next) {
 
 //J dM: I was trying to autopopulate friends, but neither pre nor post is working
 // Is there a way to autpopulate friends?
+// SE: answer: fixed - it was because "find" actually isn't being used anywhere, only the three below are!
 
-// userSchema
-//     .pre("findOne", autoPopulateFriends)
-//     .pre("find", autoPopulateFriends)
+userSchema
+    .pre("findOne", autoPopulateFriends)
+    .pre("findById", autoPopulateFriends)
+    .pre("findOneAndUpdate", autoPopulateFriends)
 
 module.exports = mongoose.model("User", userSchema)
