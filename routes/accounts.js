@@ -3,10 +3,12 @@ const router = express.Router();
 
 const accounts = require("../controllers/accounts")
 
+const { validateLogin, validateRegistration } = require("../middleware")
+
 router.route("/login")
-    .post(accounts.loginUser)
+    .post(validateLogin, accounts.loginUser)
 
 router.route("/register")
-    .post(accounts.registerUser)
+    .post(validateRegistration, accounts.registerUser)
 
 module.exports = router;

@@ -9,12 +9,14 @@ const upload = multer({ storage });
 
 const user = require("../controllers/users")
 
+const { validateEditUser } = require("../middleware")
+
 router.route("/")
     .get(isLoggedIn, user.getLoggedInUserData)
 
 router.route("/:userId")
     .get(isLoggedIn, userIsFound, user.getUserData)
-    .patch(isLoggedIn, isAuthorized, userIsFound, upload.single("profilePic"), user.editUserData)
+    .patch(isLoggedIn, isAuthorized, userIsFound, validateEditUser, upload.single("profilePic"), user.editUserData)
 
 router.route("/:userId/friends")
     .get(isLoggedIn, userIsFound, user.getFriends)

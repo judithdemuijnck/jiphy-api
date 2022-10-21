@@ -1,16 +1,14 @@
 const User = require("../models/User")
-const { sendStatus } = require("../utils/sendStatus")
+const { createFlashResponse } = require("../utils/createFlashResponse")
 
 const genericErrorMsg = "Something went wrong."
-// SE: Nitpick: unused
-const userErrorMsg = "User not found."
+
+const logger = require("../utils/logger")
 
 function sendUserData(user) {
     return { user: { ...user.toJSON() } }
 }
 
-// JdM: Should I move any of these into a differnt (e.g utils) file/folder?
-// SE: Answer: See answer in gifs.js line 21
 function removeUserFromFriends(user1, user2) {
     user1.friends.pull(user2)
     user2.friends.pull(user1)
@@ -32,8 +30,8 @@ const getLoggedInUserData = (req, res) => {
         const loggedInUser = res.locals.loggedInUser
         res.send(sendUserData(loggedInUser))
     } catch (err) {
-        console.error(err)
-        sendStatus(res, 500, genericErrorMsg)
+        logger.error(err)
+        return createFlashResponse(res, 500, genericErrorMsg)
     }
 }
 
@@ -43,12 +41,8 @@ const getUserData = (req, res) => {
 
         res.send(sendUserData(matchedUser))
     } catch (err) {
-        console.error(err)
-        // JdM: What is the difference between console.log(error) and console.error(error)?
-        // SE: answer: So theres two streams to output that unix operating systems have, SYSOUT and SYSERR. console.log/warn/debug/trace will log to SYSOUT whereas console.error will log to SYSERR
-        // In production systems you would actually send an object and not a string, i.e. {"level":"error","message":"Public error to share"}. Then you can filter by the attributes here. 
-        // If you're interested we can go into this in greater detail (you don't need to know it in depth now), you can also just scan the pino docs https://github.com/pinojs/pino, which is a JS logging library. 
-        sendStatus(res, 500, genericErrorMsg)
+        logger.error(err)
+        return createFlashResponse(res, 500, genericErrorMsg)
     }
 }
 
@@ -63,8 +57,8 @@ const editUserData = async (req, res) => {
             flash: "Changes successfully made"
         })
     } catch (err) {
-        console.error(err)
-        sendStatus(res, 500, genericErrorMsg)
+        logger.error(err)
+        return createFlashResponse(res, 500, genericErrorMsg)
     }
 }
 
@@ -73,8 +67,8 @@ const getFriends = (req, res) => {
         const matchedUser = res.locals.matchedUser
         res.send({ friends: matchedUser.friends })
     } catch (err) {
-        console.error(err)
-        sendStatus(res, 404, "Couldn't find what you're looking for.")
+        logger.error(err)
+        return createFlashResponse(res, 404, "Couldn't find what you're looking for.")
     }
 }
 
@@ -91,13 +85,12 @@ const editFriends = async (req, res) => {
         await targetUser.save()
 
         res.send({
-            // SE: question: do you need to spread here? Whats the difference between { ...sendUserData(targetUser).user } and sendUserData(targetUser).user (I'll give you a hint - there might not be one!)
-            selectedUser: { ...sendUserData(targetUser).user },
-            loggedInUser: { ...sendUserData(loggedInUser).user }
+            selectedUser: sendUserData(targetUser).user,
+            loggedInUser: sendUserData(loggedInUser).user
         })
     } catch (err) {
-        console.error(err)
-        sendStatus(res, 500, genericErrorMsg)
+        logger.error(err)
+        return createFlashResponse(res, 500, genericErrorMsg)
     }
 }
 

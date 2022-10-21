@@ -2,15 +2,25 @@ const jwt = require('jsonwebtoken');
 const jwtSecret = process.env.JWT_SECRET_KEY;
 
 const User = require("./models/User")
-const { sendStatus } = require("./utils/sendStatus")
+const { createFlashResponse } = require("./utils/createFlashResponse")
 
-module.exports.isLoggedIn = async (req, res, next) => {
+const { loginSchema, registrationSchema, editUserSchema } = require("./validationSchemas")
+
+const logger = require("./utils/logger")
+
+const returnValidationError = (response, error) => {
+    logger.error(error)
+    const msg = error.details.map(el => el.message).join(",")
+    return createFlashResponse(response, 400, msg)
+}
+
+const isLoggedIn = async (req, res, next) => {
     const recoveredToken = req.headers.token
     try {
         const decodedToken = jwt.verify(recoveredToken, jwtSecret)
         const matchedUser = await User.findById({ _id: decodedToken.userId })
         if (!matchedUser) {
-            return sendStatus(res, 404, "User not found.")
+            return createFlashResponse(res, 404, "User not found.")
         } else {
             res.locals.loggedInUserId = decodedToken.userId
             res.locals.loggedInUser = matchedUser
@@ -18,23 +28,20 @@ module.exports.isLoggedIn = async (req, res, next) => {
         }
     } catch (err) {
         console.log("error while validating token")
-        console.error(err)
-        return sendStatus(res, 401, "You need to be logged in to do this.")
+        logger.error(err)
+        return createFlashResponse(res, 401, "You need to be logged in to do this.")
     }
 }
 
-module.exports.isAuthorized = (req, res, next) => {
+const isAuthorized = (req, res, next) => {
     const { userId } = req.params
     if (res.locals.loggedInUserId === userId) {
         next()
     } else {
-        return sendStatus(res, 403, "You are not authorized to do this.")
+        return createFlashResponse(res, 403, "You are not authorized to do this.")
     }
 }
-
-// JdM: Is it ok that I moved this into middleware?
-// SE: answer: yeah I believe so - you're only scoping it to certain routes so I don't see any issue here.
-module.exports.userIsFound = async (req, res, next) => {
+const userIsFound = async (req, res, next) => {
     const { userId } = Object.keys(req.params).length !== 0 ? req.params : req.query
     try {
         const matchedUser = await User.findOne({ _id: userId })
@@ -42,12 +49,39 @@ module.exports.userIsFound = async (req, res, next) => {
             res.locals.matchedUser = matchedUser;
             next()
         } else {
-            return sendStatus(res, 404, "User not found.")
+            return createFlashResponse(res, 404, "User not found.")
         }
     } catch (err) {
-        console.error(err)
-        // 400 because of faulty userId / wrong format
-        // SE: nitpick: is the message right here?
-        return sendStatus(res, 400, "There is nothing here.")
+        logger.error(err)
+        return createFlashResponse(res, 404, "User not found.")
     }
 }
+
+const validateLogin = (req, res, next) => {
+    const { error } = loginSchema.validate(req.body)
+    if (error) {
+        return returnValidationError(res, error)
+    } else {
+        next()
+    }
+}
+
+const validateRegistration = (req, res, next) => {
+    const { error } = registrationSchema.validate(req.body)
+    if (error) {
+        return returnValidationError(res, error)
+    } else {
+        next()
+    }
+}
+
+const validateEditUser = (req, res, next) => {
+    const { error } = editUserSchema.validate(req.body)
+    if (error) {
+        return returnValidationError(res, error)
+    } else {
+        next()
+    }
+}
+
+module.exports = { isLoggedIn, isAuthorized, userIsFound, validateLogin, validateRegistration, validateEditUser }

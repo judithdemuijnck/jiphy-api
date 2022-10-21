@@ -34,8 +34,7 @@ app.use("/users", userRoute)
 app.use("/accounts", accountsRoute)
 
 app.get("/", (req, res) => {
-        // SE: Best practice: Change to 404 as nothing found - also remove the message, its implied by the 404 what the issue is
-    res.status(400).send("Nothing here")
+    res.status(404)
 })
 
 app.listen(PORT, console.log(`SERVER RUNNING ON PORT ${PORT}`))

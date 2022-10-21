@@ -1,8 +1,4 @@
-// SE: nitpick: unused import
-// Wider conversation to be had about using ESLint to catch these automatically.
-// We can chat about that later on.
-const User = require("../models/User.js")
-const { sendStatus } = require("../utils/sendStatus")
+const { createFlashResponse } = require("../utils/createFlashResponse")
 
 const axios = require("axios");
 const giphyUrl = "https://api.giphy.com/v1/gifs/search";
@@ -18,9 +14,8 @@ const giphyConfig = {
 const genericErrorMsg = "Something went wrong."
 const userErrorMsg = "User not found."
 
-// JdM: Should I move any of these into a differnt (e.g utils) file/folder?
-// SE: Answer: I would argue they're find to be 'colocated' (in same file) for now as theres no reuse between files.
-// This indicates to other devs that they're not ready to be used in several places
+const logger = require("../utils/logger")
+
 function isAlreadyInFavorites(user, gif) {
     return user.favoriteGifs?.some(favGif => favGif._id === gif._id)
 }
@@ -44,7 +39,7 @@ const searchGifs = async (req, res) => {
         // or response && response.data && response.data.data && response.data.data.map (short circuiting)
         // As an aside, this is where typescript helps - at this point it would tell You:
         // 'It looks like you're calling map on something that can be undefined - please don't do this'
-        const gifData = response.data.data.map(gif => {
+        const gifData = response?.data?.data?.map(gif => {
             return {
                 _id: gif.id,
                 searchTerm: searchTerm,
@@ -54,19 +49,18 @@ const searchGifs = async (req, res) => {
         })
         res.send(gifData);
     } catch (err) {
-        console.error(err)
-        sendStatus(res, 500, genericErrorMsg)
+        logger.error(err)
+        return createFlashResponse(res, 500, genericErrorMsg)
     }
 }
 
 const seeFavoriteGifs = (req, res) => {
     try {
-        // SE: Question: any reason this can't be const matchedUser? Always better to use const where you're not reassigning the value
-        matchedUser = res.locals.matchedUser
+        const matchedUser = res.locals.matchedUser
         res.send({ favorites: matchedUser.favoriteGifs })
     } catch (err) {
-        console.error(err)
-        sendStatus(res, 500, genericErrorMsg)
+        logger.error(err)
+        createFlashResponse(res, 500, genericErrorMsg)
     }
 }
 
@@ -75,8 +69,7 @@ const toggleFavoriteGif = async (req, res) => {
     try {
         const loggedInUser = res.locals.loggedInUser
         if (!loggedInUser) {
-            // SE: good practice: great stuff, remember to return sendStatus so the execution stops
-            sendStatus(res, 404, userErrorMsg)
+            return createFlashResponse(res, 404, userErrorMsg)
         } else {
             if (isAlreadyInFavorites(loggedInUser, favoriteGif)) {
                 removeFromFavorites(loggedInUser, favoriteGif)
@@ -89,8 +82,8 @@ const toggleFavoriteGif = async (req, res) => {
             })
         }
     } catch (err) {
-        console.error(err)
-        sendStatus(res, 500, genericErrorMsg)
+        logger.error(err)
+        return createFlashResponse(res, 500, genericErrorMsg)
     }
 }
 
