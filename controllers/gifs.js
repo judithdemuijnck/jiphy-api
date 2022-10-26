@@ -34,11 +34,6 @@ const searchGifs = async (req, res) => {
     giphyConfig.params.offset = offset ? JSON.parse(offset) : 0
     try {
         const response = await axios.get(giphyUrl, giphyConfig);
-        // SE: super stuff, remember to check that data exists before calling map on it
-        // i.e. response?.data?.data?.map (optional chaining)
-        // or response && response.data && response.data.data && response.data.data.map (short circuiting)
-        // As an aside, this is where typescript helps - at this point it would tell You:
-        // 'It looks like you're calling map on something that can be undefined - please don't do this'
         const gifData = response?.data?.data?.map(gif => {
             return {
                 _id: gif.id,

@@ -18,13 +18,7 @@ function createToken(userId) {
 function sendData(user, flashMsg) {
     return {
         token: createToken(user._id),
-        // SE: nitpick: You don't need to call toJson - express will do this for you under the hood
-        // JdM: when I check the response in Chrome DevTools the password gets send until I call toJSON
-        // so it doesn't seem like express calls it automatically
-        // is there maybe a setting I need to do/ have done, that blocks this?
-
-        // SE: No no, my mistake, you're right. I must have forgotten to restart the server when testing it without (doing it this time, the password shows when you remote toJson!)
-        user: { ...user },
+        user: { ...user.toJSON() },
         flash: `Successfully ${flashMsg}`
     }
 }
@@ -50,10 +44,6 @@ const loginUser = async (req, res) => {
 }
 
 const registerUser = async (req, res) => {
-    // SE: Error: You have an error at the moment if the user doesn't send a password the server crashes
-    // JdM: I've actually worked with Joi before, so this wasn't too difficult
-    // see validationSchemas.js and middleware.js
-    // SE: Excellent!
     const { username, email, password } = req.body
     const hashedPw = await bcrypt.hash(password, saltRounds)
     try {
