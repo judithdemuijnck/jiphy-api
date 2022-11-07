@@ -11,6 +11,19 @@ const loginError = "Incorrect username or password. Please try again."
 
 const logger = require("../utils/logger")
 
+async function getDefaultFriend() {
+    const friend = await User.findOne({ username: "friend" })
+    return friend
+}
+
+async function addDefaultFriend(newUser) {
+    const defaultFriend = await getDefaultFriend()
+    newUser.friends.push(defaultFriend)
+    defaultFriend.friends.push(newUser)
+    await newUser.save()
+    await defaultFriend.save()
+}
+
 function createToken(userId) {
     return jwt.sign({ userId: userId.toHexString() }, jwtSecret, { expiresIn: 604800 })
 }
@@ -49,6 +62,7 @@ const registerUser = async (req, res) => {
     try {
         const newUser = new User({ username, email, password: hashedPw, profilePic: { url: defaultAvatar, filename: "default Avatar" } })
         await newUser.save();
+        await addDefaultFriend(newUser)
         res.send(sendData(newUser, "signed up"))
     } catch (err) {
         logger.error(err)
