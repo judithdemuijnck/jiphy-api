@@ -34,7 +34,7 @@ app.use("/users", userRoute)
 app.use("/accounts", accountsRoute)
 
 app.get("/", (req, res) => {
-    res.status(404)
+    res.status(200).send("THIS IS JIPHY API")
 })
 
 app.listen(PORT, console.log(`SERVER RUNNING ON PORT ${PORT}`))
