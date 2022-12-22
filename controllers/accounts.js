@@ -70,4 +70,4 @@ const registerUser = async (req, res) => {
     }
 }
 
-module.exports = { loginUser, registerUser }
+module.exports = { loginUser, registerUser, addDefaultFriend }

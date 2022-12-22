@@ -29,10 +29,10 @@ function removeFromFavorites(user, gif) {
 }
 
 const searchGifs = async (req, res) => {
-    const { searchTerm, offset } = req.query;
-    giphyConfig.params.q = searchTerm;
-    giphyConfig.params.offset = offset ? JSON.parse(offset) : 0
     try {
+        const { searchTerm, offset } = req.query;
+        giphyConfig.params.q = searchTerm;
+        giphyConfig.params.offset = offset ? JSON.parse(offset) : 0
         const response = await axios.get(giphyUrl, giphyConfig);
         const gifData = response?.data?.data?.map(gif => {
             return {
@@ -42,7 +42,7 @@ const searchGifs = async (req, res) => {
                 url: gif.images.original.url
             }
         })
-        res.send(gifData);
+        return res.status(200).send(gifData);
     } catch (err) {
         logger.error(err)
         return createFlashResponse(res, 500, genericErrorMsg)
@@ -52,7 +52,7 @@ const searchGifs = async (req, res) => {
 const seeFavoriteGifs = (req, res) => {
     try {
         const matchedUser = res.locals.matchedUser
-        res.send({ favorites: matchedUser.favoriteGifs })
+        res.status(200).send({ favorites: matchedUser.favoriteGifs })
     } catch (err) {
         logger.error(err)
         createFlashResponse(res, 500, genericErrorMsg)
@@ -60,8 +60,8 @@ const seeFavoriteGifs = (req, res) => {
 }
 
 const toggleFavoriteGif = async (req, res) => {
-    const { favoriteGif } = req.body;
     try {
+        const { favoriteGif } = req.body;
         const loggedInUser = res.locals.loggedInUser
         if (!loggedInUser) {
             return createFlashResponse(res, 404, userErrorMsg)
@@ -72,7 +72,7 @@ const toggleFavoriteGif = async (req, res) => {
                 addToFavorites(loggedInUser, favoriteGif)
             }
             await loggedInUser.save()
-            res.send({
+            res.status(200).send({
                 user: { ...loggedInUser.toJSON() }
             })
         }
@@ -82,4 +82,4 @@ const toggleFavoriteGif = async (req, res) => {
     }
 }
 
-module.exports = { searchGifs, seeFavoriteGifs, toggleFavoriteGif }
+module.exports = { searchGifs, seeFavoriteGifs, toggleFavoriteGif, removeFromFavorites, addToFavorites, isAlreadyInFavorites }
